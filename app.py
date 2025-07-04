@@ -1,51 +1,37 @@
 from flask import Flask, request, jsonify
 from threading import Thread
 import logging
-import time
 import json
+from datetime import datetime
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-
-# Background task example
-def handle_webhook_data(data):
-    logging.info("Processing payload in background...")
-    # Simulate processing time (replace with real logic)
-    time.sleep(1)
-    # Just logging the data here
-    logging.info(json.dumps(data, indent=2))
-
+def process_payload(payload):
+    logging.info("✅ Payload received:")
+    logging.info(json.dumps(payload, indent=2))
+    # Replace with your logic:
+    # Save to DB, send email, start CI, trigger deployment, etc.
 
 @app.route('/', methods=['POST'])
-def github_webhook():
-    if request.method == 'POST':
-        try:
-            payload = request.get_json()
-            if not payload:
-                logging.warning("Received empty payload")
-                return jsonify({"error": "Empty payload"}), 400
+def webhook():
+    try:
+        payload = request.get_json(force=True)
+        if not payload:
+            return jsonify({"error": "Empty payload"}), 400
 
-            logging.info("Webhook received successfully")
+        Thread(target=process_payload, args=(payload,)).start()
+        return '', 200  # Respond fast
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        return jsonify({"error": "Webhook error"}), 500
 
-            # Process payload in background thread
-            Thread(target=handle_webhook_data, args=(payload,)).start()
-
-            # Respond immediately to avoid GitHub timeout
-            return '', 200
-
-        except Exception as e:
-            logging.error(f"Error while handling webhook: {e}")
-            return jsonify({"error": "Internal server error"}), 500
-
-    return jsonify({"message": "Invalid method"}), 405
-
+@app.route('/', methods=['GET'])
+def healthcheck():
+    return jsonify({
+        "status": "running",
+        "timestamp": datetime.now().isoformat()
+    }), 200
 
 if __name__ == '__main__':
-    logging.info("🚀 Starting GitHub Webhook Server on http://0.0.0.0:5000")
     app.run(host='0.0.0.0', port=5000)
