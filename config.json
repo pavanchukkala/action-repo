@@ -1,0 +1,21 @@
+{
+  "app_name": "GitHub Webhook Test Application",
+  "version": "1.0.0",
+  "environment": "development",
+  "webhook": {
+    "enabled": true,
+    "events": ["push", "pull_request", "merge"],
+    "endpoint": "https://your-webhook-endpoint.com/api/webhook"
+  },
+  "database": {
+    "type": "mongodb",
+    "host": "localhost",
+    "port": 27017,
+    "database": "github_webhooks"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  }
+}
+
