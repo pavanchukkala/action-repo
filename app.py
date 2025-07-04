@@ -1,49 +1,51 @@
-#!/usr/bin/env python3
-"""
-Sample Python Application for GitHub Webhook Testing
-This file is used to demonstrate push events and code changes.
-"""
-
+from flask import Flask, request, jsonify
+from threading import Thread
+import logging
+import time
 import json
-from datetime import datetime
 
-class SampleApp:
-    def __init__(self, name="GitHub Webhook Test App"):
-        self.name = name
-        self.version = "1.0.0"
-        self.created_at = datetime.now().isoformat()
-    
-    def get_info(self):
-        """Return application information"""
-        return {
-            "name": self.name,
-            "version": self.version,
-            "created_at": self.created_at,
-            "status": "running"
-        }
-    
-    def process_data(self, data):
-        """Process incoming data"""
-        if not data:
-            return {"error": "No data provided"}
-        
-        return {
-            "processed": True,
-            "data_type": type(data).__name__,
-            "timestamp": datetime.now().isoformat()
-        }
+app = Flask(__name__)
 
-def main():
-    """Main application entry point"""
-    app = SampleApp()
-    print(f"Starting {app.name} v{app.version}")
-    
-    # Sample data processing
-    sample_data = {"message": "Hello from GitHub webhook test!"}
-    result = app.process_data(sample_data)
-    
-    print(json.dumps(result, indent=2))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
+)
 
-if __name__ == "__main__":
-    main()
+# Background task example
+def handle_webhook_data(data):
+    logging.info("Processing payload in background...")
+    # Simulate processing time (replace with real logic)
+    time.sleep(1)
+    # Just logging the data here
+    logging.info(json.dumps(data, indent=2))
 
+
+@app.route('/', methods=['POST'])
+def github_webhook():
+    if request.method == 'POST':
+        try:
+            payload = request.get_json()
+            if not payload:
+                logging.warning("Received empty payload")
+                return jsonify({"error": "Empty payload"}), 400
+
+            logging.info("Webhook received successfully")
+
+            # Process payload in background thread
+            Thread(target=handle_webhook_data, args=(payload,)).start()
+
+            # Respond immediately to avoid GitHub timeout
+            return '', 200
+
+        except Exception as e:
+            logging.error(f"Error while handling webhook: {e}")
+            return jsonify({"error": "Internal server error"}), 500
+
+    return jsonify({"message": "Invalid method"}), 405
+
+
+if __name__ == '__main__':
+    logging.info("🚀 Starting GitHub Webhook Server on http://0.0.0.0:5000")
+    app.run(host='0.0.0.0', port=5000)
